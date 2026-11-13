@@ -1,0 +1,46 @@
+name: Publish Vue 3 Scripture Universe
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-vue.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out production branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Check out Vue development branch
+        uses: actions/checkout@v4
+        with:
+          ref: vue3-development
+          path: vue-source
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Vue dependencies
+        working-directory: vue-source/vue-app
+        run: npm install --no-audit --no-fund
+      - name: Build Vue application
+        working-directory: vue-source/vue-app
+        run: npm run build
+      - name: Publish built files to main
+        run: |
+          cp vue-source/vue-app/dist/index.html index.html
+          mkdir -p assets
+          cp -R vue-source/vue-app/dist/assets/. assets/
+          touch .nojekyll
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html assets .nojekyll
+          if ! git diff --cached --quiet; then
+            git commit -m "Deploy Vue 3 Scripture Universe build"
+            git push origin HEAD:main
+          fi
